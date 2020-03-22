@@ -28,14 +28,24 @@ Shader "Custom/StyleBlitShader"
             #include "UnityCG.cginc"
 
             float4 _Color;
-            sampler3D _JitterTable;
-            sampler2D _normals;
+            sampler3D _JitterTable; // seed point position map
+            sampler3D _TargetNormalMap; // target normal map
+            sampler2D _TargetPositionMap; // target position data, for retrieval via UV
             sampler3D _UVLut;
-            sampler2D _BlitTex;
-            sampler2D _SphereNormalMap;
-            sampler3D _RabbitMap;
-            float4 _Vertices[500];
-            // shared static half3 _myNormals[100][100];
+            sampler2D _SourceTexture; // source texture for transfer
+            sampler2D _SphereNormalMap; // the source normal map
+            sampler2D _SpherePosMap; // the source position map
+            float4 _SourceNormals[386];
+            float4 _SourcePos[386];
+            float4 _SourceUvs[386];
+
+            sampler2D _Level1; // jitter table l1
+            sampler2D _Level2; // jitter table l2
+            sampler2D _Level3; // jitter table l3
+
+            sampler2D _Norm1; // target normal map l1
+            sampler2D _Norm2; // target normal map l2
+            sampler2D _Norm3; // target normal map l3
 
             // note: no SV_POSITION in this struct
             struct v2f {
@@ -72,34 +82,57 @@ Shader "Custom/StyleBlitShader"
 
             sampler2D _MainTex;
 
-            float2 seedPoint(float2 p, float h) {
-                // float2 b = clamp(floor(p * 100/h), 0.f, 99.f) / 100;
 
-                // float2 b = 
-                
-                // float2 b = floor((p / h) ) / 100.f;
-                // float2 j = float2(0.01345, 0.962); // get this out of here, we need a jitter table
-                // float4 c = tex2D(_JitterTable, b.xy);
-                // float2 j = c.rg;
-                // b *= length(p/h);
-
-
-                float4 c = tex3D(_JitterTable, float3(p.xy, h));
-                
-                return c.xy;
-                // return floor(h * (b + j));
+            int lookupU(float3 p) {
+                float smallest = 10000.f;
+                int index = 0;
+                for (int i=0; i<386; i++) {
+                    if (length(p - _SourceNormals[i].xyz) < smallest) {
+                        smallest = length(p - _SourceNormals[i].xyz);
+                        index = i;
+                    }
+                }
+                return index;
             }
 
-            float2 NearestSeed(float2 p, float h) {
+            int lookupSourceUVByPosition(float3 p) {
+                float smallest = 10000.f;
+                int index = 0;
+                for (int i=0; i<386; i++) {
+                    if (length(p - _SourcePos[i].xyz) < smallest) {
+                        smallest = length(p - _SourcePos[i].xyz);
+                        index = i;
+                    }
+                }
+                return index;
+            }
+
+
+            float4 seedPoint(float2 p, int h) {
+                float4 c = float4(0, 0, 0, 0);
+                if (h == 1) {
+                    c = tex2D(_Level1, p);
+                } else if (h == 2) {
+                    c = tex2D(_Level2, p);
+                } else  { 
+                    c = tex2D(_Level3, p);
+                }
+
+                // float4 c = tex3D(_JitterTable, float3(p.xy, h));
+                return c;
+            }
+
+            float2 NearestSeed(float2 p, int h) {
+                float3 pixelPos = tex2D(_TargetPositionMap, p).xyz;
                 float dPrime = 100000.0f;
                 float2 sPrime = float2(0.f,0.f);
-                for (float x=-0.05f; x<=0.05f; x+=0.05f) {
-                    for (float y=-0.05f; y<=0.05f; y+=0.05f) {
+                for (float x=-0.01f; x<=0.01f; x+=0.01f) {
+                    for (float y=-0.01f; y<=0.01f; y+=0.01f) {
                         float2 pos = float2(p.x + x , p.y + y);
-                        float2 s = seedPoint(p, h);
-                        float d = length(s - p);
+                        float3 s = seedPoint(p, h).xyz;
+                        float d = length(s - pixelPos);
                         if (d < dPrime) {
-                            sPrime = s; 
+                            sPrime = pos; 
                             dPrime = d;
                         }
                     }
@@ -108,13 +141,14 @@ Shader "Custom/StyleBlitShader"
             }
 
             float4 ParallelStyleBlit(v2f i) {
-                // return (tex2D(_SphereNormalMap, i.worldPos.xy));
-                // return tex3D(_UVLut, i.worldPos.xyz);
-                float2 p = i.worldPos.xy;
+                
+                float2 p = i.uv;
+                float4 pixelPos = tex2D(_TargetPositionMap, p);
+                // return tex3D(_JitterTable, float3(p,0.2f));
+                // return tex2D(_Level3, p);
+                // return (tex2D(_TargetPositionMap, p));
+                // return (tex3D(_TargetNormalMap, float3(p, 0.f)));
                 int L = 3;
-                float t = 10.0f;
-                // return tex3D(_JitterTable, float3(p.xy, 0));
-                // return float4(0, 0, 0, 1);
                 for (int l = 1; l <= L; l++) {
                     float h = 0.f;
 
@@ -124,11 +158,86 @@ Shader "Custom/StyleBlitShader"
                         h = 0.8f;
                     }
 
-                    float2 ql = NearestSeed(p, h);
+                    float2 ql = NearestSeed(p, l);
+                    
                     // return float4(ql.xy, 0, 1);
-                    int u = 0; // tree search! or lookup of some kind
+                    // int u = 0; // tree search! or lookup of some kind
 
-                    float2 normalizedQL = ql;
+                    // float2 normalizedQL = ql;
+
+
+
+                    // float3 targetGuideAtQL = tex3D(_TargetNormalMap, float3(ql, h)).xyz;
+                    float3 targetGuideAtQL;
+                    if (l == 1) {
+                        targetGuideAtQL = tex2D(_Norm1, ql).xyz;
+                    } else if (l == 2) {
+                        targetGuideAtQL = tex2D(_Norm2, ql).xyz;
+                    } else {
+                        targetGuideAtQL = tex2D(_Norm3, ql).xyz;
+                    }
+
+                    float3 targetPosAtQL = tex2D(_TargetPositionMap, ql).xyz;
+
+                    int uIndex = lookupU(targetGuideAtQL); 
+
+                    float2 uStar = _SourceUvs[uIndex].xy;
+                    float3 uSrcNorm = _SourceNormals[uIndex].xyz;
+                    float3 uSrcPos = _SourcePos[uIndex].xyz;
+
+                    // float3 targetGuideAtP = tex3D(_TargetNormalMap, float3(p, h));
+                    float3 targetGuideAtP;
+                    if (l == 1) {
+                        targetGuideAtP = tex2D(_Norm1, p).xyz;
+                    } else if (l == 2) {
+                        targetGuideAtP = tex2D(_Norm2, p).xyz;
+                    } else {
+                        targetGuideAtP = tex2D(_Norm3, p).xyz;
+                    }
+
+                    float2 upql = uStar + (p - ql);
+
+                    float3 upql3D = uSrcPos + (pixelPos - targetPosAtQL);
+
+
+                    float testL1 = length(tex2D(_SphereNormalMap, uStar.xy).xyz);
+                    float testL2 = length(uSrcNorm);
+                    float testVal = testL1 - testL2;
+
+                    if (testL1 == 0) {
+                        return float4(1, 1, 1, 1);
+                    } else {
+                        return float4(0, 0, 0, 1);
+                    }
+
+                    // return float4(testL1 / 10, 0, 0, 1);
+
+                    // if (length(tex2D(_SphereNormalMap, uStar.xy).xyz) - uSrcNorm) < 0.50) {
+                    //     return float4(testL1, 0, 0, 1);
+                    // } else {
+                    //     return float4(0, 0, 0, 1);
+                    // }
+
+                    // go get the uv
+                    int srcPosIndex = lookupSourceUVByPosition(upql3D);
+
+                    float2 uvForSrcPos = _SourceUvs[srcPosIndex];
+
+                    float3 sourceGuideAtUStarPQL = tex2D(_SphereNormalMap, uvForSrcPos);
+                    return tex2D(_SpherePosMap, uvForSrcPos);
+
+
+                    // if (uStar.x > 1) {
+
+                    // }
+                    
+                    // return float4(uSrcNorm, 1);
+                    // return tex2D(_SphereNormalMap, p);
+                    // return float4(sourceGuideAtUStarPQL, 1.0f);
+
+                    float e = length(targetGuideAtP - sourceGuideAtUStarPQL);
+
+                    // return tex2D(_SourceTexture, uStar);
 
                     // return float4(normalizedQL.xy, 0, 1);
                     // return float4(1, 1, 1 ,1);
@@ -136,7 +245,7 @@ Shader "Custom/StyleBlitShader"
 
                     // return float4(normalizedQL.xy, 0, 1);
 
-                    // return tex2D(_RabbitMap, normalizedQL.xy);
+                    // return tex2D(_TargetNormalMap, normalizedQL.xy);
 
                     // return float4(_myNormals[70][70].xyz, 1);
 
@@ -153,67 +262,43 @@ Shader "Custom/StyleBlitShader"
                     // return uPrime;
                     // return float4((uPrime * -0.5f) * 2.f, 0, 1);
                     // return float4(uPrime.xy, 0, 1);
-                    // float2 uPrime = tex3D(_UVLut, (tex2D(_RabbitMap, ql.xy).xyz)); 
+                    // float2 uPrime = tex3D(_UVLut, (tex2D(_TargetNormalMap, ql.xy).xyz)); 
 
-                    // return tex2D(_RabbitMap, p);
+                    // return tex2D(_TargetNormalMap, p);
 
                     // return tex2D(_SphereNormalMap, p * 10);
 
                     // return tex3D(_UVLut, float3(p.x, p.y, 0.2));
 
-                    // return tex3D(_UVLut, tex3D(_RabbitMap, float3(p.xy, h)).xyz);
+                    // return tex3D(_UVLut, tex3D(_TargetNormalMap, float3(p.xy, h)).xyz);
 
-                    float3 targetGuideAtP = tex3D(_UVLut, tex3D(_RabbitMap, float3(p.xy, h)).xyz).xyz;
+                    // float3 targetGuideAtP = tex3D(_UVLut, tex3D(_TargetNormalMap, float3(p.xy, h)).xyz).xyz;
                     
-                    float3 targetGuideAtQ = tex3D(_UVLut, tex3D(_RabbitMap, float3(normalizedQL.xy, h)).xyz).xyz;
+                    // float3 targetGuideAtQ = tex3D(_UVLut, tex3D(_TargetNormalMap, float3(normalizedQL.xy, h)).xyz).xyz;
 
                     // return float4(targetGuideAtQ, 1);
 
-                    float2 uPrime = tex3D(_UVLut, targetGuideAtQ).xy; // CONFIRM THAT THIS IS RIGHT
+                    // float2 uPrime = tex3D(_UVLut, targetGuideAtQ).xy; // CONFIRM THAT THIS IS RIGHT
 
                     // return tex3D(_UVLut, targetGuideAtQ);
 
-                    float3 sourceGuideAtUPrimePQ = tex2D(_SphereNormalMap, uPrime + (p - normalizedQL)).xyz;
+                    // float3 sourceGuideAtUPrimePQ = tex2D(_SphereNormalMap, uPrime + (p - normalizedQL)).xyz;
 
                     // return tex2D(_SphereNormalMap, uPrime + (p - normalizedQL));
 
-                    float e = length(targetGuideAtP - sourceGuideAtUPrimePQ);
+                    // float e = length(targetGuideAtP - sourceGuideAtUPrimePQ);
 
-                    if (e < 1.2f) {
-                        return tex2D(_BlitTex, uPrime + (p - normalizedQL));
+                    if (e < 0.8f) {
+                        
+                        // if ( l == 1) {
+                        //     return fixed4(1, 0, 0, 1);
+                        // } else if (l == 2) {
+                        //     return fixed4(0, 1, 0, 1);
+                        // } else if (l == 3) {
+                        //     return fixed4(0, 0, 1, 1);
+                        // }
+                        return tex2D(_SourceTexture, uvForSrcPos);
                     }
-
-                    // targetGuid = _UVLut 
-
-                    // ql = NearestSeed -> normalizedQL
-                    // uPrime = || target[ql] - src[u] || -> basically, where the minimum length of targetGuide - sourceGuide is
-                    // e = || target[p] - src[uPrime + (p - ql)]
-
-                    // if (e < t) {
-                    //     targetColor[p] = sourceColor[uPrime + (p - ql)]
-                    // }
-
-
-                    // float3 test = (tex2D(_SphereNormalMap, clamp((uPrime + (p - normalizedQL)).xy, 0, 1))).xyz;  
-                    // return float4(test, 1);
-                    // float3 test = 2.f * (tex2D(_SphereNormalMap, (uPrime + ((p / length(p)) - normalizedQL))).xyz - 0.5);
-
-                    // return float4(test.xyz, 1);
-
-                    // float3 test = tex3D(_UVLut, (uPrime + (p - ql)));
-
-                    // float e = length(((i.worldNormal + 0.5f) + 0.5f) - test.xyz);
-
-                    // float e = length(pxNorm - tex3D(_UVLut, (uPrime + (p - ql))).rgb);
-                    // if (e <= 1.2f) {
-                    //     return tex2D(_BlitTex, clamp(uPrime + (p - normalizedQL), 0, 1));
-                    // }
-                    // int uPrime = argmin u length(GT[ql]-GS[u]); // tree search! or lookup of some kind
-                    // float e = length(GT[p]-GS[uPrime + (p - ql)]);
-                    // if e < t then {
-                        // return CS[uPrime + (p - ql)]
-                        // break;
-                    // }
                 }
                 return float4(0, 0, 0, 1);
             }
