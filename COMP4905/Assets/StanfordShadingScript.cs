@@ -29,6 +29,12 @@ public class StanfordShadingScript : MonoBehaviour
 
 
     Texture2D targetPositionData;
+    Texture2D targetNormData;
+
+    List<Vector4> l1ArrPoints;
+    List<Vector4> l1ArrUv;
+    List<Vector4> l2ArrPoints, l2ArrUv, l3ArrPoints, l3ArrUv;
+    Texture2D rando;
 
 
     Texture2D _level1;
@@ -57,6 +63,28 @@ public class StanfordShadingScript : MonoBehaviour
         Vector3[] sphereNormals = sphereMesh.normals;
         int[] sphereFaces = sphereMesh.triangles;
 
+        //string str  ="";
+        //float lowesty = 0.0f;
+        //float highesty = 0.0f;
+        for (int i = 0; i < sphereVerts.Length; i++)
+        {
+            //sphereVerts[i] *= 0.05f;
+            //sphereVerts[i].y += 0.025f;
+            //if (sphereVerts[i].y < lowesty)
+            //{
+            //    lowesty = sphereVerts[i].y;
+            //}
+            //if (sphereVerts[i].y > highesty)
+            //{
+            //    highesty = sphereVerts[i].y;
+            //}
+        }
+
+        //Debug.Log("Lowest Y: " + lowesty);
+        //Debug.Log("HighestY: " + highesty);
+
+        //Debug.Log(str);
+
         List<Vector4> refinedSphereNorms = new List<Vector4>();
         List<Vector4> refinedSpherePositions = new List<Vector4>();
         List<Vector4> refinedSphereUvs = new List<Vector4>();
@@ -67,9 +95,9 @@ public class StanfordShadingScript : MonoBehaviour
             float green = (sphereNormals[i].y + 0.5f) + 0.5f;
             float blue = (sphereNormals[i].z + 0.5f) + 0.5f;
 
-            float a = (sphereVerts[i].x * 0.5f) + 0.5f;
-            float b = (sphereVerts[i].y * 0.5f) + 0.5f;
-            float c = (sphereVerts[i].z * 0.5f) + 0.5f;
+            float a = (sphereVerts[i].x * 0.1f) + 0.1f;
+            float b = ((sphereVerts[i].y + 0.1f) * 0.1f) + 0.1f;
+            float c = (sphereVerts[i].z * 0.1f) + 0.1f;
 
             // do som
 
@@ -81,6 +109,7 @@ public class StanfordShadingScript : MonoBehaviour
 
             refinedSphereNorms.Add(sn);
             refinedSpherePositions.Add(new Vector4(a, b, c, 1.0f));
+            //refinedSpherePositions.Add(new Vector4(sphereVerts[i].x, sphereVerts[i].y, sphereVerts[i].z, 0.0f));
             refinedSphereUvs.Add(new Vector4(sphereUvs[i].x, sphereUvs[i].y, 0.0f, 0.0f));
         }
 
@@ -88,8 +117,8 @@ public class StanfordShadingScript : MonoBehaviour
         sourceUvs = refinedSphereUvs.ToArray();
         sourcePositions = refinedSpherePositions.ToArray();
 
-        Debug.Log("Sphere Array Lengths: " + sourceNormals.Length); 
-        Debug.Log("Sphere Position Lengths: " + sourcePositions.Length);       
+        //Debug.Log("Sphere Array Lengths: " + sourceNormals.Length); 
+        //Debug.Log("Sphere Position Lengths: " + sourcePositions.Length);       
 
         // step two: create the Normal Map.
         Texture2D sphereNormalTexture = new Texture2D(512, 512);
@@ -442,10 +471,26 @@ public class StanfordShadingScript : MonoBehaviour
 
         
 
-        bunny = GameObject.Find("bunny");
+        bunny = GameObject.Find("gdef");
         bunnyMesh = bunny.GetComponent<MeshFilter>().mesh;
 
         Vector3[] verts = bunnyMesh.vertices;
+        //verts.
+
+        //List<Vector3> vs = new List<Vector3>();
+        //string str = "";
+        //foreach (Vector3 v in verts)
+        //{
+        //    //vs.Add(v);
+        //    str += v;
+        //    str += ", ";
+        //}
+
+        //Debug.Log(str);
+        //Debug.Log(vs.Join(",", vs.ToArray());
+        
+
+
         List<Vector3> reducedVerts = new List<Vector3>();
         List<Vector3> xyOnlyComparison = new List<Vector3>();
         Vector3[] normals = bunnyMesh.normals;
@@ -453,7 +498,7 @@ public class StanfordShadingScript : MonoBehaviour
         List<Vector3> xyComparedNormals = new List<Vector3>();
         Vector2[] uvs = bunnyMesh.uv;
 
-        Debug.Log("LENGTHS: " + verts.Length + ", " + uvs.Length);
+        //Debug.Log("LENGTHS: " + verts.Length + ", " + uvs.Length);
 
         int[] triangles = bunnyMesh.triangles;
 
@@ -464,8 +509,15 @@ public class StanfordShadingScript : MonoBehaviour
         targetPositionData = TextureBlackout(targetPositionData, 256, 256);
         tpd = ArrayBlackout(tpd, 256, 256);
 
+        targetNormData = new Texture2D(256, 256);
+        Color[,] tnd = new Color[256, 256];
+
+        targetNormData = TextureBlackout(targetNormData, 256, 256);
+        tnd = ArrayBlackout(tnd, 256, 256);
+
         List<Vector2> bunnyUVRed = new List<Vector2>();
         List<Vector3> bunnyPosRed = new List<Vector3>();
+        List<Vector3> bunnyNormRed = new List<Vector3>();
 
         for (int i=0; i<uvs.Length; i++) {
             if (bunnyUVRed.Contains(uvs[i])) {
@@ -474,19 +526,26 @@ public class StanfordShadingScript : MonoBehaviour
 
             bunnyUVRed.Add(uvs[i]);
             bunnyPosRed.Add(verts[i]);
+            bunnyNormRed.Add(normals[i]);
         }
 
         
         for (int i=0; i<bunnyUVRed.Count; i++) {
 
             Vector3 pos = bunnyPosRed[i];
-            pos *= 5f;
+            //pos *= 5f;
 
             float red = (pos.x * 0.5f) + 0.5f;
             float green = (pos.y * 0.5f) + 0.5f;
             float blue = (pos.z * 0.5f) + 0.5f;
 
             Color c = new Color(red, green, blue, 1.0f);
+
+            Vector3 n = bunnyNormRed[i];
+            float nx = (n.x * 0.5f) + 0.5f;
+            float ny = (n.y * 0.5f) + 0.5f;
+            float nz = (n.z * 0.5f) + 0.5f;
+            Color cn = new Color(nx, ny, nz, 1.0f);
 
             int x = (int) Mathf.Floor(bunnyUVRed[i].x * 255);
             int y = (int) Mathf.Floor(bunnyUVRed[i].y * 255);
@@ -496,10 +555,17 @@ public class StanfordShadingScript : MonoBehaviour
 
             targetPositionData.SetPixel(x, y, c);
             tpd[x, y] = c;
+
+            targetNormData.SetPixel(x, y, cn);
+            tnd[x, y] = cn;
         }
         targetPositionData.Apply();
         byte[] by = targetPositionData.EncodeToPNG();
         File.WriteAllBytes(Application.dataPath + "/../TARGET_POS_DATA_INIT.png", by);
+
+        targetNormData.Apply();
+        by = targetNormData.EncodeToPNG();
+        File.WriteAllBytes(Application.dataPath + "/../TARGET_NORM_DATA_INT.png", by);
 
         // BLOOM THE BUN
         bool[,] floodedBunnyPos = new bool[256,256];
@@ -578,16 +644,114 @@ public class StanfordShadingScript : MonoBehaviour
             // targetPositionData.Apply();
         }
 
+        bool[,] floodedBunnNorm = new bool[256, 256];
+        bool blackLeftBunnNorm = true;
+        int iterationsOfBloomBunnNorm = 0;
+        Color texColorBunnNorm = Color.white;
+
+
+        while (iterationsOfBloomBunnNorm < 75 && blackLeftBunnNorm)
+        {
+            blackLeftBunnNorm = false;
+
+            for (int i = 0; i < 256; i++)
+            {
+                for (int j = 0; j < 256; j++)
+                {
+                    texColorBunnNorm = tnd[i, j];
+
+                    if (texColorBunnNorm == Color.black)
+                    {
+                        blackLeftBunnNorm = true;
+                        continue;
+                    }
+
+                    if (floodedBunnNorm[i, j] == true)
+                    {
+                        continue;
+                    }
+
+                    if (i > 0)
+                    {
+                        if (j < 255 && tnd[i - 1, j + 1] == Color.black)
+                        {
+                            tnd[i - 1, j + 1] = texColorBunnNorm;
+                            floodedBunnNorm[i - 1, j + 1] = true;
+                        }
+                        if (j > 0 && tnd[i - 1, j - 1] == Color.black)
+                        {
+                            tnd[i - 1, j - 1] = texColorBunnNorm;
+                            floodedBunnNorm[i - 1, j - 1] = true;
+                        }
+                        if (tnd[i - 1, j] == Color.black)
+                        {
+                            tnd[i - 1, j] = texColorBunnNorm;
+                            floodedBunnyPos[i - 1, j] = true;
+                        }
+                    }
+
+                    if (i < 255)
+                    {
+                        if (j < 255 && tnd[i + 1, j + 1] == Color.black)
+                        {
+                            tnd[i + 1, j + 1] = texColorBunnNorm;
+                            floodedBunnNorm[i + 1, j + 1] = true;
+                        }
+                        if (j > 0 && tnd[i + 1, j - 1] == Color.black)
+                        {
+                            tnd[i + 1, j - 1] = texColorBunnNorm;
+                            floodedBunnNorm[i + 1, j - 1] = true;
+                        }
+                        if (tnd[i + 1, j] == Color.black)
+                        {
+                            tnd[i + 1, j] = texColorBunnNorm;
+                            floodedBunnNorm[i + 1, j] = true;
+                        }
+                    }
+
+                    if (j < 255 && tnd[i, j + 1] == Color.black)
+                    {
+                        tnd[i, j + 1] = texColorBunnNorm;
+                        floodedBunnNorm[i, j + 1] = true;
+                    }
+                    if (j > 0 && tnd[i, j - 1] == Color.black)
+                    {
+                        tnd[i, j - 1] = texColorBunnNorm;
+                        floodedBunnNorm[i, j - 1] = true;
+                    }
+
+                    floodedBunnNorm[i, j] = true;
+                }
+            }
+
+            for (int i = 0; i < 256; i++)
+            {
+                for (int j = 0; j < 256; j++)
+                {
+                    floodedBunnNorm[i, j] = false;
+                }
+            }
+
+            iterationsOfBloomBunnNorm++;
+
+            // targetPositionData.Apply();
+        }
+
         for (int i=0; i<256; i++) {
             for (int j=0; j<256; j++) {
                 targetPositionData.SetPixel(i, j, tpd[i, j]);
+                targetNormData.SetPixel(i, j, tnd[i, j]);
             }
         }
 
         targetPositionData.Apply();
+        targetNormData.Apply();
 
         by = targetPositionData.EncodeToPNG();
         File.WriteAllBytes(Application.dataPath + "/../TARGET_POS_DATA_END.png", by);
+
+        by = targetNormData.EncodeToPNG();
+        File.WriteAllBytes(Application.dataPath + "/../TARGET_NORM_DATA_END.png", by);
 
         // Debug.Log("triangles: "+ rabbitMesh.triangles.Length);
 
@@ -627,13 +791,13 @@ public class StanfordShadingScript : MonoBehaviour
             }
         }
 
-        Debug.Log("Max X: " + maxX);
-        Debug.Log("Min X: " + minX);
-        Debug.Log("Min Y: " + miny);
-        Debug.Log("Max Y: " + maxy);
+        //Debug.Log("Max X: " + maxX);
+        //Debug.Log("Min X: " + minX);
+        //Debug.Log("Min Y: " + miny);
+        //Debug.Log("Max Y: " + maxy);
 
-        Debug.Log("Max Z: " + maxZ);
-        Debug.Log("Min Z: " + minZ);
+        //Debug.Log("Max Z: " + maxZ);
+        //Debug.Log("Min Z: " + minZ);
 
         float greatestDistance = 0;
         float smallestDistance = 0;
@@ -676,12 +840,27 @@ public class StanfordShadingScript : MonoBehaviour
             }
         }
 
-        Debug.Log("Greatest Distance: " + greatestDistance);
-        Debug.Log("Smallest Distance: " + smallestDistance);
+        //Debug.Log("Greatest Distance: " + greatestDistance);
+        //Debug.Log("Smallest Distance: " + smallestDistance);
 
         float diskSize = greatestDistance / 5.0f;
 
         selectPoints(triangles, verts, uvs, ref l1Uvs, ref l1Points, ref l1Normals, diskSize);
+
+        // l1Packing
+        l1ArrPoints = new List<Vector4>();
+        l1ArrUv = new List<Vector4>();
+        for (int i=0; i<l1Points.Count; i++)
+        {
+            Vector4 p = new Vector4(l1Points[i].x, l1Points[i].y, l1Points[i].z, 1.0f);
+            Vector4 u = new Vector4(l1Uvs[i].x, l1Uvs[i].y, 1.0f, 1.0f);
+
+            l1ArrPoints.Add(p);
+            l1ArrUv.Add(u);
+        }
+
+        Debug.Log("L1ArrPoints Count: " + l1ArrPoints.Count);
+        Debug.Log("l1ArrUV Count: " + l1ArrUv.Count);
 
         // Debug.Log("points selected length: " + l1Points.Count());
 
@@ -698,7 +877,19 @@ public class StanfordShadingScript : MonoBehaviour
         
         selectPoints(triangles, verts, uvs, ref l2Uvs, ref l2Points, ref l2Normals, diskSize);
 
-        Debug.Log("pointed for l2: " + l2Points.Count());
+        l2ArrPoints = new List<Vector4>();
+        l2ArrUv = new List<Vector4>();
+        for (int i = 0; i < l2Points.Count; i++)
+        {
+            Vector4 p = new Vector4(l2Points[i].x, l2Points[i].y, l2Points[i].z, 1.0f);
+            Vector4 u = new Vector4(l2Uvs[i].x, l2Uvs[i].y, 1.0f, 1.0f);
+
+            l2ArrPoints.Add(p);
+            l2ArrUv.Add(u);
+        }
+        Debug.Log("L2ArrPoints Count: " + l2ArrPoints.Count);
+        Debug.Log("l2ArrUV Count: " + l2ArrUv.Count);
+        //Debug.Log("pointed for l2: " + l2Points.Count());
 
         List<Vector3> l3Points = new List<Vector3>();
         List<Vector3> l3Normals = new List<Vector3>();
@@ -706,14 +897,33 @@ public class StanfordShadingScript : MonoBehaviour
         for (int i=0; i<l2Points.Count(); i++) {
             l3Points.Add(l2Points[i]);
             l3Normals.Add(l2Normals[i]);
-            l3Normals.Add(l2Uvs[i]);
+            l3Uvs.Add(l2Uvs[i]);
         }
 
         diskSize /= 2.0f;
         
         selectPoints(triangles, verts, uvs, ref l3Uvs, ref l3Points, ref l3Normals, diskSize);
 
-        Debug.Log("L3 Points: " + l3Points.Count());
+        l3ArrPoints = new List<Vector4>();
+        l3ArrUv = new List<Vector4>();
+        for (int i = 0; i < l3Points.Count; i++)
+        {
+            Vector4 p = new Vector4(l3Points[i].x, l3Points[i].y, l3Points[i].z, 1.0f);
+            
+
+            l3ArrPoints.Add(p);
+            
+        }
+
+        for (int i=0; i<l3Uvs.Count; i++)
+        {
+            Vector4 u = new Vector4(l3Uvs[i].x, l3Uvs[i].y, 1.0f, 1.0f);
+            l3ArrUv.Add(u);
+        }
+        Debug.Log("l3ArrPoints Count: " + l3ArrPoints.Count);
+        Debug.Log("l3ArrUv Count: " + l3ArrUv.Count);
+
+        //Debug.Log("L3 Points: " + l3Points.Count());
 
         List<Vector3> floored = new List<Vector3>();
         List<Vector2> coordSet1 = new List<Vector2>();
@@ -753,26 +963,34 @@ public class StanfordShadingScript : MonoBehaviour
 
 
                 Vector3 colour = l1Points[i];
-                // colour *= 100f;
-                // colour.x *= 0.5f;
-                // colour.y
 
-                colour.x *= 5f;
-                colour.y *= 5f;
-                colour.z *= 5f;
+            // colour *= 100f;
+            //colour.x *= 0.5f;
+            // colour.y
 
-                colour.x += 0.5f;
-                colour.y += 0.2f;
-                colour.z += 0.5f;
-                coloursToUse.Add(colour);
+            //colour.x *= 5f;
+            //colour.y *= 5f;
+            //colour.z *= 5f;
 
-                Vector3 normalColor = l1Normals[i];
-                // normalColor *= 0.5f;
-                normalColor.x += 0.5f;
-                normalColor.y += 0.2f;
-                normalColor.z += 0.5f;
+            //colour.x += 0.5f;
+            //    colour.y += 0.2f;
+            //    colour.z += 0.5f;
+            colour.x = (colour.x * 0.5f) + 0.5f;
+            colour.y = (colour.y * 0.5f) + 0.5f;
+            colour.z = (colour.z * 0.5f) + 0.5f;
+            coloursToUse.Add(colour);
 
-                colourNormals.Add(normalColor);
+                Vector3 normalColor = Vector3.Normalize(l1Normals[i]);
+            // normalColor *= 0.5f;
+            //normalColor.x += 0.5f;
+            //normalColor.y += 0.2f;
+            //normalColor.z += 0.5f;
+
+            normalColor.x = (normalColor.x * 0.5f) + 0.5f;
+            normalColor.y = (normalColor.y * 0.5f) + 0.5f;
+            normalColor.z = (normalColor.z * 0.5f) + 0.5f;
+
+            colourNormals.Add(normalColor);
             // }
         }
 
@@ -802,20 +1020,26 @@ public class StanfordShadingScript : MonoBehaviour
             if (!contained2) {
                 floored2.Add(floor);
 
-                Vector3 colour = l2Points[i];
+                Vector3 colour = (l2Points[i]);
                 // colour *= 100f;
                 // colour *= 0.5f;
-                colour *= 5f;
-                colour.x += 0.5f;
-                colour.y += 0.2f;
-                colour.z += 0.5f;
+                //colour *= 5f;
+                //colour.x += 0.5f;
+                //colour.y += 0.2f;
+                //colour.z += 0.5f;
+                colour.x = (colour.x * 0.5f) + 0.5f;
+                colour.y = (colour.y * 0.5f) + 0.5f;
+                colour.z = (colour.z * 0.5f) + 0.5f;
                 coloursToUse2.Add(colour);
 
-                Vector3 normalColor = l2Normals[i];
+                Vector3 normalColor = Vector3.Normalize(l2Normals[i]);
                 // normalColor *= 0.5f;
-                normalColor.x += 0.5f;
-                normalColor.y += 0.2f;
-                normalColor.z += 0.5f;
+                //normalColor.x += 0.5f;
+                //normalColor.y += 0.2f;
+                //normalColor.z += 0.5f;
+                normalColor.x = (normalColor.x * 0.5f) + 0.5f;
+                normalColor.y = (normalColor.y * 0.5f) + 0.5f;
+                normalColor.z = (normalColor.z * 0.5f) + 0.5f;
 
                 colourNormals2.Add(normalColor);
             }
@@ -848,20 +1072,26 @@ public class StanfordShadingScript : MonoBehaviour
                 floored3.Add(floor);
 
 
-                Vector3 colour = l3Points[i];
-                colour *= 5f;
-                // colour *= 100f;
-                // colour *= 0.5f;
-                colour.x += 0.5f;
-                colour.y += 0.2f;
-                colour.z += 0.5f;
+                Vector3 colour = (l3Points[i]);
+                //colour *= 5f;
+                //// colour *= 100f;
+                //// colour *= 0.5f;
+                //colour.x += 0.5f;
+                //colour.y += 0.2f;
+                colour.x = (colour.x * 0.5f) + 0.5f;
+                colour.y = (colour.y * 0.5f) + 0.5f;
+                colour.z = (colour.z * 0.5f) + 0.5f;
+                //colour.z += 0.5f;
                 coloursToUse3.Add(colour);
 
-                Vector3 normalColor = l3Normals[i];
-                normalColor *= 0.5f;
-                normalColor.x += 0.5f;
-                normalColor.y += 0.2f;
-                normalColor.z += 0.5f;
+                Vector3 normalColor = Vector3.Normalize(l3Normals[i]);
+                //normalColor *= 0.5f;
+                //normalColor.x += 0.5f;
+                //normalColor.y += 0.2f;
+                //normalColor.z += 0.5f;
+                normalColor.x = (normalColor.x * 0.5f) + 0.5f;
+                normalColor.y = (normalColor.y * 0.5f) + 0.5f;
+                normalColor.z = (normalColor.z * 0.5f) + 0.5f;
 
                 colourNormals3.Add(normalColor);
             }
@@ -1270,7 +1500,6 @@ public class StanfordShadingScript : MonoBehaviour
         
 
         // PRINT
-        GameObject.Find("Plane").GetComponent<MeshRenderer>().material.SetTexture("_MainTex", tex);
        
         thatTex = tex;
 
@@ -1340,22 +1569,54 @@ public class StanfordShadingScript : MonoBehaviour
         bytes = spherePositionMap.EncodeToPNG();
         File.WriteAllBytes(Application.dataPath + "/../SPHEREPOS.png", bytes);
 
+        rando = new Texture2D(100, 100);
+        for (int x=0; x<100; x++)
+        {
+            for (int y = 0; y<100; y++)
+            {
+                Color c = Color.white;
+
+                float a = Random.Range(0.0f, 1.0f);
+                float b = Random.Range(0.0f, 1.0f);
+
+                c.r = a;
+                c.g = b;
+
+                rando.SetPixel(x, y, c);
+            }
+        }
+        rando.Apply();
+
+
+        bytes = rando.EncodeToPNG();
+        File.WriteAllBytes(Application.dataPath + "/../RANDO.png", bytes);
+
         // EXTRA SETTING
-        GameObject r = GameObject.Find("bunny");
+        GameObject r = GameObject.Find("gdef");
         bunny = r;
         Mesh m = r.GetComponent<MeshFilter>().mesh;
         m.SetIndices(m.GetIndices(0), MeshTopology.Triangles, 0);
         r.GetComponent<Renderer>().material.SetTexture("_JitterTable", jitterPos3D);
-        // r.GetComponent<Renderer>().material.SetTexture("_UVLut", posByNormal);
         r.GetComponent<Renderer>().material.SetTexture("_TargetPositionMap", targetPositionData);
+        r.GetComponent<Renderer>().material.SetTexture("_TargetNormalMapFull", targetNormData);
         r.GetComponent<Renderer>().material.SetTexture("_SourceTexture", (Texture2D)sphere.GetComponent<MeshRenderer>().material.GetTexture("_MainTex"));
-        // r.GetComponent<Renderer>().material.SetTexture("_SphereNormalMap", (Texture2D)sphere.GetComponent<MeshRenderer>().material.GetTexture("_BumpMap"));
         r.GetComponent<Renderer>().material.SetTexture("_SphereNormalMap", sphereNormalMap);
         r.GetComponent<Renderer>().material.SetTexture("_SpherePosMap", spherePositionMap);
         r.GetComponent<Renderer>().material.SetTexture("_TargetNormalMap", jitterNorm3D);
         r.GetComponent<Renderer>().material.SetVectorArray("_SourceNormals", sourceNormals);
         r.GetComponent<Renderer>().material.SetVectorArray("_SourcePos", sourcePositions);
         r.GetComponent<Renderer>().material.SetVectorArray("_SourceUvs", sourceUvs);
+
+        r.GetComponent<Renderer>().material.SetVectorArray("_TarL1PT", l1ArrPoints.ToArray());
+        r.GetComponent<Renderer>().material.SetVectorArray("_TarL1UV", l1ArrUv.ToArray());
+
+        r.GetComponent<Renderer>().material.SetVectorArray("_TarL2PT", l2ArrPoints.ToArray());
+        r.GetComponent<Renderer>().material.SetVectorArray("_TarL2UV", l2ArrUv.ToArray());
+
+        r.GetComponent<Renderer>().material.SetVectorArray("_TarL3PT", l3ArrPoints.ToArray());
+        r.GetComponent<Renderer>().material.SetVectorArray("_TarL3UV", l3ArrUv.ToArray());
+
+        r.GetComponent<Renderer>().material.SetTexture("_Rando", rando);
 
         r.GetComponent<Renderer>().material.SetTexture("_Level1", _level1);
         r.GetComponent<Renderer>().material.SetTexture("_Level2", _level2);
@@ -1370,23 +1631,33 @@ public class StanfordShadingScript : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-    //    GameObject.Find("Plane").GetComponent<Renderer>().material.SetTexture("_MainTex", thatTex);
-
-        // OnDrawGizmos();
-        GameObject r = GameObject.Find("bunny");
-
+        // EXTRA SETTING
+        GameObject r = GameObject.Find("gdef");
+        bunny = r;
+        Mesh m = r.GetComponent<MeshFilter>().mesh;
+        m.SetIndices(m.GetIndices(0), MeshTopology.Triangles, 0);
         r.GetComponent<Renderer>().material.SetTexture("_JitterTable", jitterPos3D);
-        // r.GetComponent<Renderer>().material.SetTexture("_UVLut", posByNormal);
         r.GetComponent<Renderer>().material.SetTexture("_TargetPositionMap", targetPositionData);
+        r.GetComponent<Renderer>().material.SetTexture("_TargetNormalMapFull", targetNormData);
         r.GetComponent<Renderer>().material.SetTexture("_SourceTexture", (Texture2D)sphere.GetComponent<MeshRenderer>().material.GetTexture("_MainTex"));
-        // r.GetComponent<Renderer>().material.SetTexture("_SphereNormalMap", (Texture2D)sphere.GetComponent<MeshRenderer>().material.GetTexture("_BumpMap"));
         r.GetComponent<Renderer>().material.SetTexture("_SphereNormalMap", sphereNormalMap);
         r.GetComponent<Renderer>().material.SetTexture("_SpherePosMap", spherePositionMap);
         r.GetComponent<Renderer>().material.SetTexture("_TargetNormalMap", jitterNorm3D);
         r.GetComponent<Renderer>().material.SetVectorArray("_SourceNormals", sourceNormals);
-        r.GetComponent<Renderer>().material.SetVectorArray("_SourceUvs", sourceUvs);
         r.GetComponent<Renderer>().material.SetVectorArray("_SourcePos", sourcePositions);
-    
+        r.GetComponent<Renderer>().material.SetVectorArray("_SourceUvs", sourceUvs);
+
+        r.GetComponent<Renderer>().material.SetVectorArray("_TarL1PT", l1ArrPoints.ToArray());
+        r.GetComponent<Renderer>().material.SetVectorArray("_TarL1UV", l1ArrUv.ToArray());
+
+        r.GetComponent<Renderer>().material.SetVectorArray("_TarL2PT", l2ArrPoints.ToArray());
+        r.GetComponent<Renderer>().material.SetVectorArray("_TarL2UV", l2ArrUv.ToArray());
+
+        r.GetComponent<Renderer>().material.SetVectorArray("_TarL3PT", l3ArrPoints.ToArray());
+        r.GetComponent<Renderer>().material.SetVectorArray("_TarL3UV", l3ArrUv.ToArray());
+
+        r.GetComponent<Renderer>().material.SetTexture("_Rando", rando);
+
         r.GetComponent<Renderer>().material.SetTexture("_Level1", _level1);
         r.GetComponent<Renderer>().material.SetTexture("_Level2", _level2);
         r.GetComponent<Renderer>().material.SetTexture("_Level3", _level3);
@@ -1441,7 +1712,7 @@ public class StanfordShadingScript : MonoBehaviour
 
             Vector2 uv1 = uvs[faces[i]];
             Vector2 uv2 = uvs[faces[i+1]];
-            Vector2 uv3 = uvs[faces[i+1]];
+            Vector2 uv3 = uvs[faces[i+2]];
 
             Vector3 A = p1 - p2;
             Vector3 B = p1 - p3;
@@ -1474,282 +1745,21 @@ public class StanfordShadingScript : MonoBehaviour
                 }
 
                 mid = p1 + (r1 * A) + (r2 * B);
-                
                 uvMid = uv1 + (r1 * UVA) + (r2 * UVB);
-
-                selected.Add(mid);
-                uvPointsToUse.Add(uvMid);
 
                 Vector3 X = p2 - p1;
                 Vector3 Y = p3 - p1;
 
                 Vector3 normal = Vector3.Cross(X, Y);
 
-                float length = Mathf.Sqrt(Mathf.Pow(normal.x, 2) + Mathf.Pow(normal.y, 2) + Mathf.Pow(normal.z, 2));
-                normal /= length;
+                normal = Vector3.Normalize(normal);
 
-                if (mid == normal) {
-                    // Debug.Log("they're the same :/");
-                }
-
+                uvPointsToUse.Add(uvMid);
+                selected.Add(mid);
                 normals.Add(normal);
                 
             }
         }
-        // return selected;
-    }
-
-    void BloomColors() {
-         // bool black = true;
-        // int iterations = 0;
-        // while (black && iterations < 150) {
-        //     black = false;
-        //     for (int i=0; i<100; i++) {
-        //         for (int j=0; j<100; j++) {
-        //             Color texColor = tex.GetPixel(i, j);
-        //             if (texColor == Color.black) {
-        //                 black = true;
-        //                 continue;
-        //             }
-
-        //             if (i>0) {
-        //                 if (j < 99 && tex.GetPixel(i-1, j+1) == Color.black) {
-        //                     tex.SetPixel(i-1, j+1, texColor);
-        //                 }
-        //                 if (j > 0 && tex.GetPixel(i-1, j-1) == Color.black) {
-        //                     tex.SetPixel(i-1, j-1, texColor);
-        //                 }
-        //                 if (tex.GetPixel(i-1, j) == Color.black) {
-        //                     tex.SetPixel(i-1, j, texColor);
-        //                 }
-        //             }
-
-        //             if (i < 99) {
-        //                 if (j < 99 && tex.GetPixel(i+1, j+1) == Color.black) {
-        //                     tex.SetPixel(i+1, j+1, texColor);
-        //                 }
-        //                 if (j > 0 && tex.GetPixel(i+1, j-1) == Color.black) {
-        //                     tex.SetPixel(i+1, j-1, texColor); 
-        //                 }
-        //                 if (tex.GetPixel(i+1, j) == Color.black) {
-        //                     tex.SetPixel(i+1, j, texColor);
-        //                 }
-        //             }
-
-        //             if (j<99 && tex.GetPixel(i, j+1) == Color.black) {
-        //                 tex.SetPixel(i, j+1, texColor);
-        //             }
-        //             if (j>0 && tex.GetPixel(i, j-1) == Color.black) {
-        //                 tex.SetPixel(i, j-1, texColor);
-        //             }
-
-        //             if (iterations < 50) {
-        //                 i++;
-        //                 j++;
-
-        //                 // if (iterations > 50) {
-        //                 //     i++;
-        //                 //     j++;
-        //                 // }
-        //             }
-                    
-
-        //         }
-        //     }
-
-        //     // tex.Apply();
-
-        //     // 2nd loop
-        //     for (int i=99; i>=0; i--) {
-        //         for (int j=99; j>=0; j--) {
-        //             Color texColor = tex.GetPixel(i, j);
-        //             if (texColor == Color.black) {
-        //                 black = true;
-        //                 continue;
-        //             }
-
-        //             if (i>0) {
-        //                 if (j < 99 && tex.GetPixel(i-1, j+1) == Color.black) {
-        //                     tex.SetPixel(i-1, j+1, texColor);
-        //                 }
-        //                 if (j > 0 && tex.GetPixel(i-1, j-1) == Color.black) {
-        //                     tex.SetPixel(i-1, j-1, texColor);
-        //                 }
-        //                 if (tex.GetPixel(i-1, j) == Color.black) {
-        //                     tex.SetPixel(i-1, j, texColor);
-        //                 }
-        //             }
-
-        //             if (i < 99) {
-        //                 if (j < 99 && tex.GetPixel(i+1, j+1) == Color.black) {
-        //                     tex.SetPixel(i+1, j+1, texColor);
-        //                 }
-        //                 if (j > 0 && tex.GetPixel(i+1, j-1) == Color.black) {
-        //                     tex.SetPixel(i+1, j-1, texColor); 
-        //                 }
-        //                 if (tex.GetPixel(i+1, j) == Color.black) {
-        //                     tex.SetPixel(i+1, j, texColor);
-        //                 }
-        //             }
-
-        //             if (j<99 && tex.GetPixel(i, j+1) == Color.black) {
-        //                 tex.SetPixel(i, j+1, texColor);
-        //             }
-        //             if (j>0 && tex.GetPixel(i, j-1) == Color.black) {
-        //                 tex.SetPixel(i, j-1, texColor);
-        //             }
-
-        //             if (iterations < 50) {
-        //                 i--;
-        //                 j--;
-        //             }
-
-        //             // if (iterations > 50) {
-        //             //         i--;
-        //             //         j--;
-        //             //     }
-                    
-
-        //         }
-        //     }
-
-        //     // tex.Apply();
-
-        //     // 2nd loop
-        //     for (int i=99; i>=0; i--) {
-        //         for (int j=0; j<100; j++) {
-        //             Color texColor = tex.GetPixel(i, j);
-        //             if (texColor == Color.black) {
-        //                 black = true;
-        //                 continue;
-        //             }
-
-        //             if (i>0) {
-        //                 if (j < 99 && tex.GetPixel(i-1, j+1) == Color.black) {
-        //                     tex.SetPixel(i-1, j+1, texColor);
-        //                 }
-        //                 if (j > 0 && tex.GetPixel(i-1, j-1) == Color.black) {
-        //                     tex.SetPixel(i-1, j-1, texColor);
-        //                 }
-        //                 if (tex.GetPixel(i-1, j) == Color.black) {
-        //                     tex.SetPixel(i-1, j, texColor);
-        //                 }
-        //             }
-
-        //             if (i < 99) {
-        //                 if (j < 99 && tex.GetPixel(i+1, j+1) == Color.black) {
-        //                     tex.SetPixel(i+1, j+1, texColor);
-        //                 }
-        //                 if (j > 0 && tex.GetPixel(i+1, j-1) == Color.black) {
-        //                     tex.SetPixel(i+1, j-1, texColor); 
-        //                 }
-        //                 if (tex.GetPixel(i+1, j) == Color.black) {
-        //                     tex.SetPixel(i+1, j, texColor);
-        //                 }
-        //             }
-
-        //             if (j<99 && tex.GetPixel(i, j+1) == Color.black) {
-        //                 tex.SetPixel(i, j+1, texColor);
-        //             }
-        //             if (j>0 && tex.GetPixel(i, j-1) == Color.black) {
-        //                 tex.SetPixel(i, j-1, texColor);
-        //             }
-
-        //             if (iterations < 50) {
-        //                 i--;
-        //                 j++;
-        //             }
-
-        //             // if (iterations > 50) {
-        //             //         i--;
-        //             //         j++;
-        //             //     }
-                    
-
-        //         }
-        //     }
-
-        //     // tex.Apply();
-
-        //     // 2nd loop
-        //     for (int i=0; i<100; i++) {
-        //         for (int j=99; j>=0; j--) {
-        //             Color texColor = tex.GetPixel(i, j);
-        //             if (texColor == Color.black) {
-        //                 black = true;
-        //                 continue;
-        //             }
-
-        //             if (i>0) {
-        //                 if (j < 99 && tex.GetPixel(i-1, j+1) == Color.black) {
-        //                     tex.SetPixel(i-1, j+1, texColor);
-        //                 }
-        //                 if (j > 0 && tex.GetPixel(i-1, j-1) == Color.black) {
-        //                     tex.SetPixel(i-1, j-1, texColor);
-        //                 }
-        //                 if (tex.GetPixel(i-1, j) == Color.black) {
-        //                     tex.SetPixel(i-1, j, texColor);
-        //                 }
-        //             }
-
-        //             if (i < 99) {
-        //                 if (j < 99 && tex.GetPixel(i+1, j+1) == Color.black) {
-        //                     tex.SetPixel(i+1, j+1, texColor);
-        //                 }
-        //                 if (j > 0 && tex.GetPixel(i+1, j-1) == Color.black) {
-        //                     tex.SetPixel(i+1, j-1, texColor); 
-        //                 }
-        //                 if (tex.GetPixel(i+1, j) == Color.black) {
-        //                     tex.SetPixel(i+1, j, texColor);
-        //                 }
-        //             }
-
-        //             if (j<99 && tex.GetPixel(i, j+1) == Color.black) {
-        //                 tex.SetPixel(i, j+1, texColor);
-        //             }
-        //             if (j>0 && tex.GetPixel(i, j-1) == Color.black) {
-        //                 tex.SetPixel(i, j-1, texColor);
-        //             }
-
-        //             if (iterations < 50) {
-        //                 i++;
-        //                 j--;
-        //             }
-
-        //             // if (iterations > 50) {
-        //             //         i++;
-        //             //         j--;
-        //             //     }
-                    
-
-        //         }
-        //     }
-
-        //     if (!black) {
-        //         for (int i=0; i<100; i++) {
-        //             for (int j=0; j< 100; j++) {
-        //                 if (black) {
-        //                     break;
-        //                 }
-        //                 if (tex.GetPixel(i, j) == Color.black) {
-        //                     black = true;
-        //                 }
-        //             }
-        //             if (black) {
-        //                 break;
-        //             }
-        //         }
-        //     }
-
-        //     // Debug.Log("its + black: " + iterations + ", " + black);
-
-        //     tex.Apply();
-
-        //     // bytes = tex.EncodeToPNG();
-        //     // File.WriteAllBytes(Application.dataPath + "/../after-iteration-" + iterations + ".png", bytes);
-        //     iterations++;
-        // }
-
     }
 
 }

@@ -1,9 +1,14 @@
 fileFormatVersion: 2
 guid: 1d907beeb84724f7aa9368e558e3f59f
 ModelImporter:
-  serializedVersion: 28
+  serializedVersion: 19300
   internalIDToNameTable: []
-  externalObjects: {}
+  externalObjects:
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: golem_MeshMat
+    second: {fileID: 2100000, guid: 7457013fa078c4b3e9a9ee80641ebe48, type: 2}
   materials:
     materialImportMode: 1
     materialName: 0
